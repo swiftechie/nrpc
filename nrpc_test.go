@@ -45,7 +45,52 @@ func TestBasic(t *testing.T) {
 		t.Fatal("wrong response: ", string(dm.Foobar))
 	}
 }
+func TestReConnect(t *testing.T) {
+	opts := []nats.Option{
+		nats.Name("TestReConnect"),
+		nats.ReconnectWait(2 * time.Second),
+		nats.MaxReconnects(10),
+		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
+			log.Printf("Disconnected due to: %v, will attempt reconnects", err)
+		}),
+		nats.ReconnectHandler(func(nc *nats.Conn) {
+			log.Printf("Reconnected to %v", nc.ConnectedUrl())
+		}),
+		nats.ClosedHandler(func(nc *nats.Conn) {
+			log.Printf("Connection closed: %v", nc.LastError())
+		}),
+	}
+	nc, err := nats.Connect(nrpc.NatsURL, opts...)
+	// nc, err := nats.Connect(nrpc.NatsURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer nc.Close()
 
+	go func() {
+		nrpc.Gnatsd.Shutdown()
+		nrpc.Gnatsd.Start()
+	}()
+	subn, err := nc.Subscribe("foo.*", func(m *nats.Msg) {
+		if err := nrpc.Publish(&DummyMessage{Foobar: "world"}, nil, nc, m.Reply, "protobuf"); err != nil {
+			t.Fatal(err)
+		}
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer subn.Unsubscribe()
+
+	var dm DummyMessage
+	if err := nrpc.Call(
+		&DummyMessage{Foobar: "hello"}, &dm, nc, "foo.bar", "protobuf", 5*time.Second,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if dm.Foobar != "world" {
+		t.Fatal("wrong response: ", string(dm.Foobar))
+	}
+}
 func TestDecode(t *testing.T) {
 	nc, err := nats.Connect(nrpc.NatsURL, nats.Timeout(5*time.Second))
 	if err != nil {

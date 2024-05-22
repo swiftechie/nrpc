@@ -11,9 +11,11 @@ import (
 )
 
 var NatsURL string
+var Gnatsd *server.Server
 
 func TestMain(m *testing.M) {
 	gnatsd := server.New(&server.Options{Port: server.RANDOM_PORT})
+	Gnatsd = gnatsd
 	gnatsd.SetLogger(
 		logger.NewStdLogger(false, false, false, false, false),
 		false, false)
