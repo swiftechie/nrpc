@@ -410,6 +410,9 @@ func main() {
 	}
 
 	var response plugin.CodeGeneratorResponse
+	const FEATURE_PROTO3_OPTIONAL = 1
+	var supportedFeatureOptional uint64 = FEATURE_PROTO3_OPTIONAL
+	response.SupportedFeatures = &supportedFeatureOptional
 	if err := proto.Unmarshal(data, &request); err != nil {
 		log.Fatalf("error: parsing input proto: %v", err)
 	}
