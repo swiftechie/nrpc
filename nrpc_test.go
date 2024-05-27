@@ -49,7 +49,7 @@ func TestReConnect(t *testing.T) {
 	opts := []nats.Option{
 		nats.Name("TestReConnect"),
 		nats.ReconnectWait(2 * time.Second),
-		nats.MaxReconnects(10),
+		nats.MaxReconnects(-1),
 		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
 			log.Printf("Disconnected due to: %v, will attempt reconnects", err)
 		}),
@@ -71,6 +71,7 @@ func TestReConnect(t *testing.T) {
 		nrpc.Gnatsd.Shutdown()
 		nrpc.Gnatsd.Start()
 	}()
+	time.Sleep(5 * time.Second)
 	subn, err := nc.Subscribe("foo.*", func(m *nats.Msg) {
 		if err := nrpc.Publish(&DummyMessage{Foobar: "world"}, nil, nc, m.Reply, "protobuf"); err != nil {
 			t.Fatal(err)
